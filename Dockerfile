@@ -1,4 +1,4 @@
-FROM golang:alpine as builder
+FROM golang:alpine AS builder
 WORKDIR /src/app
 COPY go.mod main.go ./
 COPY index.html ./

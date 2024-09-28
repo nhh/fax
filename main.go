@@ -43,7 +43,7 @@ func main() {
 			return c.Get("X-Original-Forwarded-For") // Stands behind cloudflare
 		},
 		LimitReached: func(c *fiber.Ctx) error {
-			return c.SendStatus(409)
+			return c.SendStatus(429)
 		},
 	}))
 
