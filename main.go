@@ -85,6 +85,7 @@ func handleFax(ctx *fiber.Ctx) error {
 		}
 
 		fmt.Println("~~~~~~ MESSAGE ~~~~~~")
+		fmt.Println(time.Now().UTC().String())
 		fmt.Println(text)
 		fmt.Println("")
 		fmt.Println(name)
@@ -93,6 +94,9 @@ func handleFax(ctx *fiber.Ctx) error {
 		conn.Write([]byte{0x1B, 0x40}) // Initialize
 
 		conn.Write([]byte("~~~~~~ MESSAGE ~~~~~~\n"))
+		conn.Write([]byte(time.Now().UTC().String()))
+		conn.Write([]byte("\n"))
+		conn.Write([]byte("\n"))
 		conn.Write([]byte(text))
 		conn.Write([]byte("\n"))
 		conn.Write([]byte(name))
