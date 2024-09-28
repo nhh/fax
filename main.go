@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"log"
 	"net"
 	"net/http"
+	"time"
 )
 
 // Embed a single file
@@ -28,6 +30,22 @@ func main() {
 	flag.Parse()
 
 	app := fiber.New()
+
+	// Or extend your config for customization
+	app.Use(limiter.New(limiter.Config{
+		Next: func(c *fiber.Ctx) bool {
+			// Only limit actual fax submits
+			return c.Path() != "/fax"
+		},
+		Max:        2,
+		Expiration: 1 * time.Hour,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.Get("X-Original-Forwarded-For") // Stands behind cloudflare
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.SendStatus(409)
+		},
+	}))
 
 	if *env == "development" {
 		app.Get("/", func(ctx *fiber.Ctx) error {
