@@ -5,6 +5,7 @@ package main
 import (
 	"embed"
 	"flag"
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"log"
@@ -65,10 +66,19 @@ func handleFax(ctx *fiber.Ctx) error {
 			return
 		}
 
+		fmt.Println("~~~~~~ MESSAGE ~~~~~~")
+		fmt.Println(text)
+		fmt.Println("")
+		fmt.Println(name)
+		fmt.Println("~~~~~~ END ~~~~~~")
+
 		conn.Write([]byte{0x1B, 0x40}) // Initialize
 
+		conn.Write([]byte("~~~~~~ MESSAGE ~~~~~~\n"))
 		conn.Write([]byte(text))
+		conn.Write([]byte("\n"))
 		conn.Write([]byte(name))
+		conn.Write([]byte("~~~~~~ END ~~~~~~\n"))
 	}()
 
 	return ctx.Redirect("/", 302)
