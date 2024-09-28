@@ -37,8 +37,8 @@ func main() {
 			// Only limit actual fax submits
 			return c.Path() != "/fax"
 		},
-		Max:        2,
-		Expiration: 1 * time.Hour,
+		Max:        5,
+		Expiration: 5 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.Get("X-Original-Forwarded-For") // Stands behind cloudflare
 		},
@@ -96,6 +96,7 @@ func handleFax(ctx *fiber.Ctx) error {
 		conn.Write([]byte(text))
 		conn.Write([]byte("\n"))
 		conn.Write([]byte(name))
+		conn.Write([]byte("\n"))
 		conn.Write([]byte("~~~~~~ END ~~~~~~\n"))
 	}()
 
