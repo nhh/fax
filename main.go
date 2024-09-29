@@ -28,6 +28,7 @@ var embedDirStatic embed.FS
 
 func main() {
 	env := flag.String("env", "production", "Set stuff to dev")
+	listenAddress := flag.String("listen", ":3000", "Port to listen for incoming connections.")
 	flag.Parse()
 
 	app := fiber.New()
@@ -70,7 +71,7 @@ func main() {
 	}
 
 	app.Post("/fax", handleFax)
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(*listenAddress))
 }
 
 func handleFax(ctx *fiber.Ctx) error {
