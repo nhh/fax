@@ -82,7 +82,7 @@ func handleFax(ctx *fiber.Ctx) error {
 		if err != nil {
 			return
 		}
-		defer conn.Close()
+		defer closeWithLog(conn)
 
 		fmt.Println("~~~~~~ MESSAGE ~~~~~~")
 		fmt.Println(time.Now().UTC().String())
@@ -105,4 +105,15 @@ func handleFax(ctx *fiber.Ctx) error {
 	}()
 
 	return ctx.Redirect("/", 302)
+}
+
+func closeWithLog(closable Closable) {
+	err := closable.Close()
+	if err != nil {
+		log.Println("error: " + err.Error())
+	}
+}
+
+type Closable interface {
+	Close() error
 }
