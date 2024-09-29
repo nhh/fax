@@ -1,14 +1,13 @@
-FROM golang:alpine AS builder
-WORKDIR /src/app
-COPY go.mod main.go ./
-COPY index.html ./
-COPY ./static ./static
+FROM docker.io/golang:1.23 AS builder
+WORKDIR /src
+COPY go.* .
+RUN go mod download
 
-RUN go mod tidy
+COPY . /src/
+RUN CGO_ENABLED=0 go build -o fax
 
-RUN go build -o fax
-
-FROM alpine
-WORKDIR /root/
-COPY --from=builder /src/app ./app
-CMD ["./app/fax"]
+# final image
+FROM scratch
+COPY --from=builder /src/fax /fax
+CMD ["/fax"]
+EXPOSE 3000
