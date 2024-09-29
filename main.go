@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,7 +27,7 @@ var f embed.FS
 //go:embed static/*
 var embedDirStatic embed.FS
 
-var msgQueue = make(chan Message)
+var lock sync.Mutex
 
 type Message struct {
 	author string
@@ -78,16 +79,6 @@ func main() {
 		}))
 	}
 
-	// start queue worker
-	go func() {
-		for {
-			select {
-			case msg := <-msgQueue:
-				sendToPrinter(msg)
-			}
-		}
-	}()
-
 	app.Post("/fax", handleFax)
 	log.Fatal(app.Listen(*listenAddress))
 }
@@ -104,12 +95,16 @@ func handleFax(ctx *fiber.Ctx) error {
 	fmt.Println(name)
 	fmt.Println("~~~~~~ END ~~~~~~")
 
-	msgQueue <- Message{name, text, time}
+	// fire and forget
+	go sendToPrinter(Message{name, text, time})
 
 	return ctx.Redirect("/", 302)
 }
 
 func sendToPrinter(msg Message) {
+	lock.Lock()
+	defer lock.Unlock()
+
 	conn, err := net.Dial("tcp", "192.168.188.232:9100")
 	if err != nil {
 		return
