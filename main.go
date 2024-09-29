@@ -79,11 +79,10 @@ func handleFax(ctx *fiber.Ctx) error {
 
 	go func() {
 		conn, err := net.Dial("tcp", "192.168.188.232:9100")
-		defer conn.Close()
-
 		if err != nil {
 			return
 		}
+		defer conn.Close()
 
 		fmt.Println("~~~~~~ MESSAGE ~~~~~~")
 		fmt.Println(time.Now().UTC().String())
