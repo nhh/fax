@@ -26,6 +26,14 @@ var f embed.FS
 //go:embed static/*
 var embedDirStatic embed.FS
 
+var msgQueue = make(chan Message)
+
+type Message struct {
+	author string
+	text   string
+	time   time.Time
+}
+
 func main() {
 	env := flag.String("env", "production", "Set stuff to dev")
 	listenAddress := flag.String("listen", ":3000", "Port to listen for incoming connections.")
@@ -70,6 +78,16 @@ func main() {
 		}))
 	}
 
+	// start queue worker
+	go func() {
+		for {
+			select {
+			case msg := <-msgQueue:
+				sendToPrinter(msg)
+			}
+		}
+	}()
+
 	app.Post("/fax", handleFax)
 	log.Fatal(app.Listen(*listenAddress))
 }
@@ -77,35 +95,37 @@ func main() {
 func handleFax(ctx *fiber.Ctx) error {
 	text := ctx.FormValue("text")
 	name := ctx.FormValue("name")
+	time := time.Now().UTC()
 
-	go func() {
-		conn, err := net.Dial("tcp", "192.168.188.232:9100")
-		if err != nil {
-			return
-		}
-		defer closeWithLog(conn)
+	fmt.Println("~~~~~~ MESSAGE ~~~~~~")
+	fmt.Println(time.String())
+	fmt.Println(text)
+	fmt.Println("")
+	fmt.Println(name)
+	fmt.Println("~~~~~~ END ~~~~~~")
 
-		fmt.Println("~~~~~~ MESSAGE ~~~~~~")
-		fmt.Println(time.Now().UTC().String())
-		fmt.Println(text)
-		fmt.Println("")
-		fmt.Println(name)
-		fmt.Println("~~~~~~ END ~~~~~~")
-
-		conn.Write([]byte{0x1B, 0x40}) // Initialize
-
-		conn.Write([]byte("~~~~~~ MESSAGE ~~~~~~\n"))
-		conn.Write([]byte(time.Now().UTC().String()))
-		conn.Write([]byte("\n"))
-		conn.Write([]byte("\n"))
-		conn.Write([]byte(text))
-		conn.Write([]byte("\n"))
-		conn.Write([]byte(name))
-		conn.Write([]byte("\n"))
-		conn.Write([]byte("~~~~~~ END ~~~~~~\n"))
-	}()
+	msgQueue <- Message{name, text, time}
 
 	return ctx.Redirect("/", 302)
+}
+
+func sendToPrinter(msg Message) {
+	conn, err := net.Dial("tcp", "192.168.188.232:9100")
+	if err != nil {
+		return
+	}
+	defer closeWithLog(conn)
+
+	conn.Write([]byte{0x1B, 0x40}) // Initialize
+	conn.Write([]byte("~~~~~~ MESSAGE ~~~~~~\n"))
+	conn.Write([]byte(msg.time.String()))
+	conn.Write([]byte("\n"))
+	conn.Write([]byte("\n"))
+	conn.Write([]byte(msg.text))
+	conn.Write([]byte("\n"))
+	conn.Write([]byte(msg.author))
+	conn.Write([]byte("\n"))
+	conn.Write([]byte("~~~~~~ END ~~~~~~\n"))
 }
 
 func closeWithLog(closable Closable) {
