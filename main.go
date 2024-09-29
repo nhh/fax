@@ -105,6 +105,8 @@ func sendToPrinter(msg Message) {
 	lock.Lock()
 	defer lock.Unlock()
 
+	time.Sleep(10 * time.Second)
+
 	conn, err := net.Dial("tcp", "192.168.188.232:9100")
 	if err != nil {
 		return
