@@ -6,13 +6,14 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"log"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 // Embed a single file
