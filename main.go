@@ -11,10 +11,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 // Embed a single file
@@ -40,65 +36,44 @@ func main() {
 	listenAddress := flag.String("listen", ":3000", "Port to listen for incoming connections.")
 	flag.Parse()
 
-	app := fiber.New()
-
-	// Or extend your config for customization
-	app.Use(limiter.New(limiter.Config{
-		Next: func(c *fiber.Ctx) bool {
-			// Only limit actual fax submits
-			return c.Path() != "/fax"
-		},
-		Max:        5,
-		Expiration: 5 * time.Minute,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.Get("X-Original-Forwarded-For") // Stands behind cloudflare
-		},
-		LimitReached: func(c *fiber.Ctx) error {
-			return c.SendStatus(429)
-		},
-	}))
+	mux := http.NewServeMux()
 
 	if *env == "development" {
-		app.Get("/", func(ctx *fiber.Ctx) error {
-			return ctx.SendFile("./index.html")
+		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./index.html")
 		})
 
-		app.Static("/static", "./static")
+		mux.Handle("GET /static/*", http.FileServer(http.Dir("static")))
 	} else {
-		app.Use("/", filesystem.New(filesystem.Config{
-			Root: http.FS(f),
-		}))
+		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFileFS(w, r, f, "index.html")
+		})
 
-		// Access file "image.png" under `static/` directory via URL: `http://<server>/static/image.png`.
-		// Without `PathPrefix`, you have to access it via URL:
-		// `http://<server>/static/static/image.png`.
-		app.Use("/static", filesystem.New(filesystem.Config{
-			Root:       http.FS(embedDirStatic),
-			PathPrefix: "static",
-			Browse:     true,
-		}))
+		mux.Handle("GET /static/*", http.FileServer(http.FS(embedDirStatic)))
 	}
 
-	app.Post("/fax", handleFax)
-	log.Fatal(app.Listen(*listenAddress))
+	mux.HandleFunc("POST /fax", handleFax)
+
+	log.Fatal(http.ListenAndServe(*listenAddress, mux))
 }
 
-func handleFax(ctx *fiber.Ctx) error {
-	text := ctx.FormValue("text")
-	name := ctx.FormValue("name")
-	time := time.Now().UTC()
+func handleFax(w http.ResponseWriter, r *http.Request) {
+
+	text := r.FormValue("text")
+	name := r.FormValue("name")
+	currentTime := time.Now().UTC()
 
 	fmt.Println("~~~~~~ MESSAGE ~~~~~~")
-	fmt.Println(time.String())
+	fmt.Println(currentTime.String())
 	fmt.Println(text)
 	fmt.Println("")
 	fmt.Println(name)
 	fmt.Println("~~~~~~ END ~~~~~~")
 
 	// fire and forget
-	go sendToPrinter(Message{name, text, time})
+	go sendToPrinter(Message{name, text, currentTime})
 
-	return ctx.Redirect("/", 302)
+	http.Redirect(w, r, "/", 302)
 }
 
 func sendToPrinter(msg Message) {
