@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-func Init() *RateLimiter {
-	rl := RateLimiter{counter: 0, mu: sync.Mutex{}}
+func Init() Limiter {
+	rl := rateLimiter{counter: 0, mu: sync.Mutex{}}
 	go resetRateLimit(&rl)
 
 	return &rl
 }
 
-func resetRateLimit(rl *RateLimiter) {
+func resetRateLimit(rl *rateLimiter) {
 	for {
 		time.Sleep(60 * 5 * time.Second)
 		rl.mu.Lock()
@@ -21,16 +21,21 @@ func resetRateLimit(rl *RateLimiter) {
 	}
 }
 
-type RateLimiter struct {
+type Limiter interface {
+	IsLimited() bool
+	Increment()
+}
+
+type rateLimiter struct {
 	mu      sync.Mutex
 	counter int
 }
 
-func (limiter *RateLimiter) IsLimited() bool {
+func (limiter *rateLimiter) IsLimited() bool {
 	return limiter.counter >= 5
 }
 
-func (limiter *RateLimiter) Increment() {
+func (limiter *rateLimiter) Increment() {
 	limiter.mu.Lock()
 	limiter.counter++
 	limiter.mu.Unlock()
