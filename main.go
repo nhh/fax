@@ -38,18 +38,20 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	fmt.Printf("Running in %s...", *env)
+
 	if *env == "development" {
-		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("GET /static/", http.FileServer(http.Dir("static")))
+
+		mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "./index.html")
 		})
-
-		mux.Handle("GET /static/*", http.FileServer(http.Dir("static")))
 	} else {
-		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("GET /static/", http.FileServer(http.FS(embedDirStatic)))
+
+		mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFileFS(w, r, f, "index.html")
 		})
-
-		mux.Handle("GET /static/*", http.FileServer(http.FS(embedDirStatic)))
 	}
 
 	mux.HandleFunc("POST /fax", handleFax)
