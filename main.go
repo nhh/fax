@@ -6,6 +6,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"github.com/nhh/fax/internal/limiter"
 	"log"
 	"net"
 	"net/http"
@@ -25,18 +26,7 @@ var embedDirStatic embed.FS
 
 var lock sync.Mutex
 
-type RateLimit struct {
-	mu      sync.Mutex
-	counter int
-}
-
-var limiter = RateLimit{
-	counter: 0,
-}
-
-func (limiter *RateLimit) IsLimited() bool {
-	return limiter.counter >= 5
-}
+var rl = limiter.Start()
 
 type Message struct {
 	author string
@@ -50,9 +40,6 @@ func main() {
 	flag.Parse()
 
 	mux := http.NewServeMux()
-
-	// Shoot off ratelimiter to infinity
-	go resetRateLimit()
 
 	fmt.Printf("Running in %s...", *env)
 
@@ -75,24 +62,13 @@ func main() {
 	log.Fatal(http.ListenAndServe(*listenAddress, mux))
 }
 
-func resetRateLimit() {
-	for {
-		time.Sleep(60 * 5 * time.Second)
-		limiter.mu.Lock()
-		limiter.counter = 0
-		limiter.mu.Unlock()
-	}
-}
-
 func handleFax(w http.ResponseWriter, r *http.Request) {
-	if limiter.IsLimited() {
+	if rl.IsLimited() {
 		w.WriteHeader(429)
 		return
 	}
 
-	limiter.mu.Lock()
-	limiter.counter++
-	limiter.mu.Unlock()
+	rl.Increment()
 
 	text := r.FormValue("text")
 	name := r.FormValue("name")
