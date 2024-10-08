@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // Embed a single file
@@ -72,6 +73,12 @@ func handleFax(w http.ResponseWriter, r *http.Request) {
 
 	text := r.FormValue("text")
 	name := r.FormValue("name")
+
+	if text == "" || utf8.RuneCountInString(text) < 20 {
+		w.WriteHeader(400)
+		return
+	}
+
 	currentTime := time.Now().UTC()
 
 	fmt.Println("~~~~~~ MESSAGE ~~~~~~")
