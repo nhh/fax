@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func Init() Limiter {
+func New() Limiter {
 	rl := rateLimiter{counter: 0, mu: sync.Mutex{}}
 	go resetRateLimit(&rl)
 

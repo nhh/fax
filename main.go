@@ -27,7 +27,7 @@ var embedDirStatic embed.FS
 
 var lock sync.Mutex
 
-var rl = limiter.Init()
+var rl = limiter.New()
 
 type Message struct {
 	author string
