@@ -16,13 +16,13 @@
     <form action="/fax" method="post">
         <fieldset>
             <label>
-                <textarea required minlength="20" rows="10" name="text" placeholder="Dieser Text wird auf einem Bon bei mir Zuhause gedruckt"></textarea>
+                <textarea maxlength="2048" required minlength="20" rows="10" name="text" placeholder="Dieser Text wird auf einem Bon bei mir Zuhause gedruckt"></textarea>
             </label>
         </fieldset>
 
         <fieldset>
             <label>
-                <input type="text" name="name" placeholder="Dein Name (Optional)">
+                <input maxlength="2048" type="text" name="name" placeholder="Dein Name (Optional)">
             </label>
         </fieldset>
 
