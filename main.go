@@ -84,6 +84,11 @@ func handleFax(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if utf8.RuneCountInString(name) > 128 {
+		http.Redirect(w, r, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 303)
+		return
+	}
+
 	currentTime := time.Now().UTC()
 
 	fmt.Println("~~~~~~ MESSAGE ~~~~~~")
