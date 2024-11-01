@@ -54,6 +54,16 @@ func main() {
 		mux.Handle("GET /static/", http.FileServer(http.FS(embedDirStatic)))
 
 		mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+			// Every request gets a cookie, that is http only to avoid cross origin request forgery
+			cookie := http.Cookie{
+				Name:     "plsdonthackme",
+				Value:    "pls",
+				Domain:   "fax.pfusch.dev",
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteStrictMode,
+			}
+			r.AddCookie(&cookie)
 			http.ServeFileFS(w, r, f, "index.html")
 		})
 	}
@@ -66,6 +76,14 @@ func main() {
 func handleFax(w http.ResponseWriter, r *http.Request) {
 	if rl.IsLimited() {
 		w.WriteHeader(429)
+		return
+	}
+
+	// Using a http only cookie to verify, that request came from the correct origin
+	_, err := r.Cookie("plsdonthackme")
+
+	if err != nil {
+		http.Redirect(w, r, "/", 302)
 		return
 	}
 
