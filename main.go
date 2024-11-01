@@ -63,7 +63,9 @@ func main() {
 				HttpOnly: true,
 				SameSite: http.SameSiteStrictMode,
 			}
-			r.AddCookie(&cookie)
+
+			http.SetCookie(w, &cookie)
+
 			http.ServeFileFS(w, r, f, "index.html")
 		})
 	}
