@@ -3,10 +3,14 @@ package main
 // https://github.com/kunif/EscPosUtils
 
 import (
+	"context"
+	"database/sql"
 	"embed"
 	"flag"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/nhh/fax/internal/limiter"
+	"github.com/nhh/fax/internal/orm"
 	"log"
 	"net"
 	"net/http"
@@ -35,8 +39,31 @@ type Message struct {
 	time   time.Time
 }
 
+//go:embed schema.sql
+var ddl string
+
+var queries *orm.Queries
+var env *string
+
+func init() {
+	fmt.Println(ddl)
+	ctx := context.TODO()
+
+	db, err := sql.Open("sqlite3", "./fax.db")
+	if err != nil {
+		panic(err)
+	}
+
+	// create tables
+	if _, err := db.ExecContext(ctx, ddl); err != nil {
+		panic(err)
+	}
+
+	queries = orm.New(db)
+}
+
 func main() {
-	env := flag.String("env", "production", "Set stuff to dev")
+	env = flag.String("env", "production", "Set stuff to dev")
 	listenAddress := flag.String("listen", ":3000", "Port to listen for incoming connections.")
 	flag.Parse()
 
@@ -84,7 +111,8 @@ func handleFax(w http.ResponseWriter, r *http.Request) {
 	// Using a http only cookie to verify, that request came from the correct origin
 	_, err := r.Cookie("plsdonthackme")
 
-	if err != nil {
+	if err != nil && *env == "production" {
+		fmt.Println(err)
 		http.Redirect(w, r, "/", 302)
 		return
 	}
@@ -120,8 +148,26 @@ func handleFax(w http.ResponseWriter, r *http.Request) {
 
 	// fire and forget
 	go sendToPrinter(Message{name, text, currentTime})
+	go saveToDb(orm.CreateAuthorParams{
+		Name: name,
+		Bio:  sql.NullString{String: text, Valid: true},
+	})
+
+	count, err := queries.CountAuthors(context.TODO())
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(count)
 
 	http.Redirect(w, r, "/", 302)
+}
+
+func saveToDb(params orm.CreateAuthorParams) {
+	_, err := queries.CreateAuthor(context.TODO(), params)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func sendToPrinter(msg Message) {
